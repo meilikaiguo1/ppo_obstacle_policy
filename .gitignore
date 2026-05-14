@@ -1,0 +1,36 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDE/editor metadata
+.idea/
+.vscode/
+
+# Runtime outputs and experiment records
+output/
+runs/
+tmp/
+logs/
+logfiles/
+
+# Model checkpoints and training artifacts
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.npy
+*.npz
+*.csv
+*.tfevents*
+
+# Binary/vendor data that should not be stored in this code repo
+*.dll
+*.hgt
+*.rar
+*.zip
+*.7z
+
+# OS noise
+.DS_Store
+Thumbs.db
