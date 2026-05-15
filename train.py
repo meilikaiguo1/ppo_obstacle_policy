@@ -70,7 +70,7 @@ def train(args):
     ppo_agent = DogfightAgent(p_id, args, trainable = args.trainable, torch_dist= args.torch_dist, device = device)
 
     #蓝机策略池
-    dfops = DFOPS(args)
+    dfops = DFOPS(args, p_id)
     maneuver_lib = ManeuversLib(0.1)
     #历史策略编号
     history_index = args.sf_history_index
@@ -376,6 +376,7 @@ def train(args):
                   "blue_win_num:", avg_blue_win_num.item(), "draw_num:", ava_draw_num.item(), "red_fall:", ava_red_fall_num.item(),"blue_fall:", avg_blue_fall_num.item(), "red_harm:", ava_red_harm_num.item(),"blue_harm:", avg_blue_harm_num.item())
             print("red_win_rate:", ava_red_win_rate, "blue_win_rate:", ava_blue_win_rate, "draw_rate:", ava_draw_rate,
                   "red_fall_rate:", ava_red_fall_rate, "blue_fall_rate:", ava_blue_fall_rate)
+            print(f"当前策略得分 = {dfops.sample_scores}, 当前策略分布为 = [{dfops.opponent_list[0]['type'], dfops.opponent_list[1]['type'], dfops.opponent_list[2]['type'], dfops.opponent_list[3]['type']}]")
 
             print('消耗总时间 = ', time.time() - start_time,f'epoch = {epoch}消耗时间 = ',time.time() - end_time)
             end_time = time.time()
@@ -401,7 +402,7 @@ def init_process(rank, size, pargs, fn, backend = 'gloo'):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--seed', type=int, default=514)
+    parser.add_argument('--seed', type=int, default=515)
     parser.add_argument('--model_dir', type=str, default=".\\output")
 
     parser.add_argument('--epoch_train_iters', type=int, default=4)
@@ -410,14 +411,14 @@ if __name__ == '__main__':
     parser.add_argument('--lam', type=float, default=0.95)
     parser.add_argument('--target_kl', type=float, default=0.01)
 
-    parser.add_argument('--per_steps', type=int, default=1024)
+    parser.add_argument('--per_steps', type=int, default=2048)
     parser.add_argument('--procs', type=int, default=2)
     parser.add_argument('--num_minibatches', type=int, default=8)
 
     parser.add_argument('--lr', type=float, default=2.5e-4)
     parser.add_argument('--anneal_lr', type=bool, default=True)
-    parser.add_argument('--total_timesteps', type=int, default=20000000)
-    parser.add_argument('--sim_max_steps', type=int, default=12000)
+    parser.add_argument('--total_timesteps', type=int, default=10000000)
+    parser.add_argument('--sim_max_steps', type=int, default=18000)
     parser.add_argument('--torch_dist', type=bool, default=False)
     parser.add_argument('--trainable', type=bool, default=True)
 
@@ -450,15 +451,10 @@ if __name__ == '__main__':
     parser.add_argument('--continue_train', type=bool, default=False)
     parser.add_argument('--continue_epoch', type=int, default=0)
     parser.add_argument('--continue_sf', type=bool, default=False)
-    parser.add_argument('--sf_history_index', type=int, default=0) #上一次储存的历史网络策略编号
+    parser.add_argument('--sf_history_index', type=int, default=2) #上一次储存的历史网络策略编号
     parser.add_argument('--history_sf_num', type=int, default=0)  #策略池中历史网络策略数量
-    parser.add_argument('--history_start_index', type=int, default=0) #加载的历史网络策略起始编号
+    parser.add_argument('--history_start_index', type=int, default=1) #加载的历史网络策略起始编号
 
-    parser.add_argument('--last_sim_epoch', type=int, default=0)  #记录训练中断前的仿真轮次
-    parser.add_argument('--last_ppg_win_num', type=int, default=0)  # 记录训练中断前的ppg策略的胜场
-    parser.add_argument('--last_cc_ppo_policy_win_num', type=int, default=0)  # 记录训练中断前的ppg策略的胜场
-    parser.add_argument('--last_cc_ppo_abs_policy_win_num', type=int, default=0)  # 记录训练中断前的ppg策略的胜场
-    parser.add_argument('--last_warcraft_win_num', type=int, default=0)  # 记录训练中断前的ppg策略的胜场
 
 
     pargs = parser.parse_args()

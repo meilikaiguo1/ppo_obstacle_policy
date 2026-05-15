@@ -1,9 +1,10 @@
 import random
 from WVRENV_PHD.SimArg import InitialData
 from WVRENV_PHD.SimInput import FighterDataIn
+from WVRENV_PHD.basic.ObstacleModel import get_elevation
 from WVRENV_PHD.basic.SensorModel import Terrain_sensor
 from WVRENV_PHD.simulation_env import CombatEnv
-from WVRENV_PHD.utils.GNCData import vector_angle, euler2vector, ned_to_body, wgs84ToNED
+from WVRENV_PHD.utils.GNCData import vector_angle, euler2vector, ned_to_body, wgs84ToNED, ned_to_wgs84
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 from point_cloud import Voxel
@@ -81,13 +82,13 @@ def Reset(env, op_id,sim_set_dict = None):
     env.initial_data.orientation.append(blue_orientation)
 
     #重置载机坐标
+    env.initial_data.NED = []
     red_ned = [
         np.random.uniform(-5000, -3000),
         np.random.uniform(2000, 5000),
         -sim_set_dict["alt"]
     ]
-    env.initial_data.NED = []
-    env.initial_data.NED.append(red_ned)
+
 
     #计算蓝机位置
     los_stable_body = euler2vector(0, sim_set_dict['body_q_d'], sim_set_dict['body_q_t'])
@@ -96,6 +97,18 @@ def Reset(env, op_id,sim_set_dict = None):
     los_NED = np.matmul(R_StabbleBody2NED, los_stable_body)
     blue_ned = [red_ned[0] + los_NED[0] * sim_set_dict['dist'], red_ned[1] + los_NED[1] * sim_set_dict['dist'],
                max(min(-sim_set_dict['alt'] + los_NED[2] * sim_set_dict['dist'], -5000), -8000)]
+
+
+    #防止初始时刻载机高度在地形下
+    red_lon, red_lat, red_alt = ned_to_wgs84(red_ned)
+    red_rel_ele = red_alt - get_elevation(red_lat, red_lon)
+    if red_rel_ele < 100:
+        red_ned[2] = red_rel_ele + 300
+    blue_lon, blue_lat, blue_alt = ned_to_wgs84(blue_ned)
+    blue_rel_ele = blue_alt - get_elevation(blue_lat, blue_lon)
+    if blue_rel_ele < 100:
+        blue_ned[2] = blue_rel_ele + 300
+    env.initial_data.NED.append(red_ned)
     env.initial_data.NED.append(blue_ned)
 
     #重置马赫数

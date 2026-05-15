@@ -19,10 +19,11 @@ from policy.warcraft import Warcraft
 
 
 class DFOPS(object):
-    def __init__(self, args,device = torch.device("cuda:0")):
+    def __init__(self, args,p_id ,device = torch.device("cuda:0")):
         self.init_kar = args.init_kar
         self.proc_id = proc_id()
         self.net_device =  device
+        self.pid = p_id
 
         #boltzman 分布中的温度系数
         self.sample_scores = np.array([0.5, 0.5, 0.5, 0.5], dtype=np.float32)
@@ -146,7 +147,11 @@ class DFOPS(object):
 
         #归一化成概率
         probs = weights / np.sum(weights)
-        self.opponent_id = random.choices( np.arange(len(probs)), weights=probs, k=1)[0]
+        self.opponent_id = random.choices(np.arange(len(probs)), weights=probs, k=1)[0]
+        if self.opponent_list[self.opponent_id]["type"] == 'warcraft':
+            self.warcraft.policy_reset
+        if self.pid == 0:
+            print(f'当前对手策略为 = {self.opponent_list[self.opponent_id]["type"]}')
 
 
     def sampled_policy(self, env, maneuver_lib):
