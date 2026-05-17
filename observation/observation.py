@@ -253,7 +253,7 @@ def avoidance_obs_dict_to_array(obs_norm):
 def normalized_avoidance_obs(obs):
     for key , value in obs.items():
         if key == "distance":
-            obs[key] = np.clip(value / 5000.0, 0.0, 1.0)
+            obs[key] = np.clip(value / 2000.0, 0.0, 1.0)
         # elif key == "los_pitch_body":
         #     obs[key] = value / 90
         # elif key == "los_yaw_body":
@@ -263,7 +263,7 @@ def normalized_avoidance_obs(obs):
         elif key == "ATA":
             obs[key] = value / 180
         elif key == "rel_alt":
-            obs[key] = np.clip(value / 2000.0, -1.0, 1.0)
+            obs[key] = np.clip(value / 5000.0, -1.0, 1.0)
         elif key == "ma":
             obs[key] = logistic(float(value), 7, 0.75)
         elif key == "pitch":
@@ -293,7 +293,7 @@ def normalized_avoidance_obs(obs):
 def normalized_dogfight_obs(obs, t_obs):
     for key, value in obs.items():
         if key == "rel_alt":
-            obs[key] = np.clip(value / 2000.0, -1.0, 1.0)
+            obs[key] = np.clip(value / 5000.0, -1.0, 1.0)
         elif key == "ma":
             obs[key] = logistic(float(value), 7, 0.75)
         elif key == "pitch":
@@ -339,7 +339,7 @@ def normalized_dogfight_obs(obs, t_obs):
         elif key == "AA_hori":
             t_obs[key] = value / 180
         elif key == "t_bloods":
-            obs[key] = value / 3.0
+            t_obs[key] = value / 3.0
     return  obs ,t_obs
 
 

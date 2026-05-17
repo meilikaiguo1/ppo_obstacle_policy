@@ -134,6 +134,7 @@ class DFOPS(object):
         胜率接近 0 或 1，采样概率越低。
         '''
         self.epi_count += 1
+        self.ao.reset()
 
         if self.epi_count % 50 == 0:
             self.update_score()
@@ -149,7 +150,7 @@ class DFOPS(object):
         probs = weights / np.sum(weights)
         self.opponent_id = random.choices(np.arange(len(probs)), weights=probs, k=1)[0]
         if self.opponent_list[self.opponent_id]["type"] == 'warcraft':
-            self.warcraft.policy_reset
+            self.warcraft.policy_reset()
         if self.pid == 0:
             print(f'当前对手策略为 = {self.opponent_list[self.opponent_id]["type"]}')
 

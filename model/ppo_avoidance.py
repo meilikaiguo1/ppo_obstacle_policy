@@ -36,7 +36,7 @@ class PPOAgent():
 
 
         #set network
-        self.act_dim = args.avoidance_action_dim
+        self.act_dim = args.avoidance_act_dim
         self.obs_self_dim = args.avo_obs_self_dim
         self.obs_terrain_dim = args.obs_terrain_dim
         self.mlp_feat_dim = args.mlp_feat_dim

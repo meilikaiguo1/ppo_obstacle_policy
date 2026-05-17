@@ -207,7 +207,7 @@ def train(args):
                 record_trajectory(env, step, record_num, file_dir)
 
             #进程0每隔10个epoch记录每步奖励
-            if p_id == 0 and epoch == 0:
+            if p_id == 0 and epoch % 10 == 0:
                 with open(reward_data_name, 'a', newline='') as f:
                     writer = csv.writer(f)
                     writer.writerow(
@@ -215,6 +215,8 @@ def train(args):
                          info["red_win_reward"], info["blue_win_reward"],info["red_fall_reward"], info["blue_fall_reward"], info["draw_reward"]])
 
             if terminal >= 0:
+                if p_id == 0:
+                    print(f'terminal: {terminal}')
                 epi_turns.append(epi_return)
                 epi_return = 0
                 record_num += 1
@@ -377,7 +379,6 @@ def train(args):
             print("red_win_rate:", ava_red_win_rate, "blue_win_rate:", ava_blue_win_rate, "draw_rate:", ava_draw_rate,
                   "red_fall_rate:", ava_red_fall_rate, "blue_fall_rate:", ava_blue_fall_rate)
             print(f"当前策略得分 = {dfops.sample_scores}, 当前策略分布为 = [{dfops.opponent_list[0]['type'], dfops.opponent_list[1]['type'], dfops.opponent_list[2]['type'], dfops.opponent_list[3]['type']}]")
-
             print('消耗总时间 = ', time.time() - start_time,f'epoch = {epoch}消耗时间 = ',time.time() - end_time)
             end_time = time.time()
 
@@ -402,7 +403,7 @@ def init_process(rank, size, pargs, fn, backend = 'gloo'):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--seed', type=int, default=515)
+    parser.add_argument('--seed', type=int, default=518)
     parser.add_argument('--model_dir', type=str, default=".\\output")
 
     parser.add_argument('--epoch_train_iters', type=int, default=4)
@@ -411,8 +412,8 @@ if __name__ == '__main__':
     parser.add_argument('--lam', type=float, default=0.95)
     parser.add_argument('--target_kl', type=float, default=0.01)
 
-    parser.add_argument('--per_steps', type=int, default=2048)
-    parser.add_argument('--procs', type=int, default=2)
+    parser.add_argument('--per_steps', type=int, default=4096)
+    parser.add_argument('--procs', type=int, default=3)
     parser.add_argument('--num_minibatches', type=int, default=8)
 
     parser.add_argument('--lr', type=float, default=2.5e-4)
@@ -451,9 +452,9 @@ if __name__ == '__main__':
     parser.add_argument('--continue_train', type=bool, default=False)
     parser.add_argument('--continue_epoch', type=int, default=0)
     parser.add_argument('--continue_sf', type=bool, default=False)
-    parser.add_argument('--sf_history_index', type=int, default=2) #上一次储存的历史网络策略编号
+    parser.add_argument('--sf_history_index', type=int, default=0) #上一次储存的历史网络策略编号
     parser.add_argument('--history_sf_num', type=int, default=0)  #策略池中历史网络策略数量
-    parser.add_argument('--history_start_index', type=int, default=1) #加载的历史网络策略起始编号
+    parser.add_argument('--history_start_index', type=int, default=0) #加载的历史网络策略起始编号
 
 
 

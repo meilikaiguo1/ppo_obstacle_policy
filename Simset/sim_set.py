@@ -103,7 +103,7 @@ def Reset(env, op_id,sim_set_dict = None):
     red_lon, red_lat, red_alt = ned_to_wgs84(red_ned)
     red_rel_ele = red_alt - get_elevation(red_lat, red_lon)
     if red_rel_ele < 100:
-        red_ned[2] = red_rel_ele + 300
+        red_ned[2] = red_rel_ele - 300
     blue_lon, blue_lat, blue_alt = ned_to_wgs84(blue_ned)
     blue_rel_ele = blue_alt - get_elevation(blue_lat, blue_lon)
     if blue_rel_ele < 100:
