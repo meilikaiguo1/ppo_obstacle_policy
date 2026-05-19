@@ -178,9 +178,9 @@ def train(args):
                     logprob_buf[step] = logprob
 
                     a = action.squeeze(0)
-                    ele_ang = a[0].item() * 45
-                    azi_ang = a[1].item() * 90
-                    dis = 500 + (1 + a[2].item()) * 500
+                    ele_ang = a[0].item() * 90
+                    azi_ang = a[1].item() * 180
+                    dis = 200 + (1 + a[2].item()) * 900
 
                     #将dogf输出的目标点给到训练好的avoidance网络
                     action = dogf2avoidance(ele_ang, azi_ang, dis, next_terrain_grid, env, env.world.fighters[0], ppo_agent.avoidance_pi)
@@ -403,7 +403,7 @@ def init_process(rank, size, pargs, fn, backend = 'gloo'):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--seed', type=int, default=518)
+    parser.add_argument('--seed', type=int, default=519)
     parser.add_argument('--model_dir', type=str, default=".\\output")
 
     parser.add_argument('--epoch_train_iters', type=int, default=4)

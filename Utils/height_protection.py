@@ -8,6 +8,7 @@ import math
 from scipy.spatial.transform import Rotation as R
 import time
 
+from WVRENV_PHD.utils.GNCData import wgs84ToNED
 
 sensor_pargs = [10, 3000, 1, 10]
 
@@ -54,18 +55,23 @@ def attitude_trace(fc_data, delta_pos):
 
     return action
 
-def abs_height_protection(fighter , control_input, abs_height = 5500):
-
+def abs_height_protection(fighter, target, control_input, abs_height = 5000):
     # 高度大于绝对高度时，不进行高度保护
     if fighter.fc_data.fAltitude > abs_height:
         return control_input
     # 高度小于绝对高度时，进行姿态追踪
     else:
-        delta_pos = [10 * math.cos(fighter.fc_data.fPathYawAngle / 57.3), 10 * math.sin(fighter.fc_data.fPathYawAngle / 57.3), -50]
+        l_n, l_e, l_d = wgs84ToNED(target.fc_data.fLatitude, target.fc_data.fLongitude, target.fc_data.fAltitude,
+                                   fighter.fc_data.fLatitude, fighter.fc_data.fLongitude, fighter.fc_data.fAltitude)
+        t_los_ned = np.array([l_n, l_e, l_d])
+        los_yaw = np.arctan2(t_los_ned[1], t_los_ned[0])
+        los_pitch = -np.arctan2(t_los_ned[2], np.linalg.norm(t_los_ned[0:2]))
+
+        delta_pos = [1000 * np.cos(los_pitch) * np.cos(los_yaw), 1000 * np.cos(los_pitch) * np.sin(los_yaw), - 1000 * np.sin(np.deg2rad(10))]
         return attitude_trace(fighter.fc_data, delta_pos)
 
 
-def rel_height_protection(fighter, control_input,rel_height = 500):
+def rel_height_protection(fighter, target, control_input,rel_height = 500):
 
     # _, _, terrain_alt, _ = ray_terrain_intersection(fighter, sensor_pargs[0], sensor_pargs[1], sensor_pargs[2], sensor_pargs[3])
 
@@ -77,7 +83,14 @@ def rel_height_protection(fighter, control_input,rel_height = 500):
         return control_input
     # 高度小于相对高度时，进行姿态追踪
     else:
-        delta_pos = [10 * math.cos(fighter.fc_data.fPathYawAngle / 57.3), 10 * math.sin(fighter.fc_data.fPathYawAngle / 57.3), -50]
+        l_n, l_e, l_d = wgs84ToNED(target.fc_data.fLatitude, target.fc_data.fLongitude, target.fc_data.fAltitude,
+                                   fighter.fc_data.fLatitude, fighter.fc_data.fLongitude, fighter.fc_data.fAltitude)
+        t_los_ned = np.array([l_n, l_e, l_d])
+        los_yaw = np.arctan2(t_los_ned[1], t_los_ned[0])
+        los_pitch = -np.arctan2(t_los_ned[2], np.linalg.norm(t_los_ned[0:2]))
+
+        delta_pos = [1000 * np.cos(los_pitch) * np.cos(los_yaw), 1000 * np.cos(los_pitch) * np.sin(los_yaw),
+                     - 1000 * np.sin(np.deg2rad(10))]
         return attitude_trace(fighter.fc_data, delta_pos)
 
 
@@ -95,9 +108,15 @@ class Comb_glorithm():
         self.flag_control = 0
         self.need_ao = 0.00001
 
-    def step(self, fighter, control_input):
-        delta_pos = [10 * math.cos(fighter.fc_data.fPathYawAngle / 57.3),
-                     10 * math.sin(fighter.fc_data.fPathYawAngle / 57.3), -50]
+    def step(self, fighter, target, control_input):
+        l_n, l_e, l_d = wgs84ToNED(target.fc_data.fLatitude, target.fc_data.fLongitude, target.fc_data.fAltitude,
+                                   fighter.fc_data.fLatitude, fighter.fc_data.fLongitude, fighter.fc_data.fAltitude)
+        t_los_ned = np.array([l_n, l_e, l_d])
+        los_yaw = np.arctan2(t_los_ned[1], t_los_ned[0])
+        los_pitch = -np.arctan2(t_los_ned[2], np.linalg.norm(t_los_ned[0:2]))
+
+        delta_pos = [1000 * np.cos(los_pitch) * np.cos(los_yaw), 1000 * np.cos(los_pitch) * np.sin(los_yaw),
+                     - 1000 * np.sin(np.deg2rad(10))]
         self.need_ao = NeedtoAvoidObstacle(fighter)
         #未触发避障
         if self.need_ao <= 0.001 and self.flag_AO <= 0.001:
@@ -112,7 +131,7 @@ class Comb_glorithm():
             terrain_alt = get_elevation(fighter.fc_data.fLatitude, fighter.fc_data.fLongitude)
             if fighter.fc_data.fAltitude - terrain_alt < 100:
                 self.cycle_AO = self.cycle_AO + 10
-            self.flag_AO = self.flag_AO - 1 / self.cycle_AO
+            self.flag_AO = self.flag_AO - 10 / self.cycle_AO
             self.flag_control = 2
 
         #完全响应空战指令

@@ -96,20 +96,20 @@ def reward_func(env, prev_target_bloods ,terminal):
     pitch_rate_risk = logistic(abs(fighter.fc_data.fPitchRate), 0.15, 25.0)
     roll_rate_risk = logistic(abs(fighter.fc_data.fRollRate), 0.032, 75.0) - 0.08
     normal_load_risk = logistic(abs(fighter.fc_data.fNormalLoad), 1.0, 7.0)
-    r_stability = - 0.6 * (
+    r_stability = - 0.8 * (
         0.5 * pitch_rate_risk +
         0.6 * roll_rate_risk +
         0.4 * normal_load_risk
     )
 
     #命中敌机奖励
-    if prev_target_bloods != target.combat_data.bloods:
+    if prev_target_bloods != target.combat_data.bloods and target.combat_data.bloods != 3:
         r_fire = 5 +  2.5 * (prev_target_bloods - target.combat_data.bloods)
     else:
         r_fire = 0
 
     #降低血量惩罚
-    r_bloods = - 2 * ((3 - fighter.combat_data.bloods) / 3)
+    r_bloods = - ((3 - fighter.combat_data.bloods) / 3)
 
     #低空俯冲惩罚
     alt_rel = fighter.fc_data.fAltitude - get_elevation(

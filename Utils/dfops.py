@@ -16,8 +16,6 @@ from policy.warcraft import Warcraft
 
 
 
-
-
 class DFOPS(object):
     def __init__(self, args,p_id ,device = torch.device("cuda:0")):
         self.init_kar = args.init_kar
@@ -164,10 +162,10 @@ class DFOPS(object):
             action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib)
 
         elif self.opponent_list[self.opponent_id]["type"] == "cc_ppo":
-            action = self.cc_ppo_policy(env, fighter)
+            action = self.cc_ppo_policy(env, fighter, target)
 
         elif self.opponent_list[self.opponent_id]["type"] == "cc_abs":
-            action = self.cc_ppo_abs_policy(env, fighter)
+            action = self.cc_ppo_abs_policy(env, fighter, target)
 
         elif self.opponent_list[self.opponent_id]["type"] == "warcraft":
             action = self.warcraft_policy(fighter, target)
@@ -182,9 +180,9 @@ class DFOPS(object):
                 terrain_grid = ac_model.encode_terrain(normal_voxels)
                 a, _, _, _ = ac_model.get_action_and_value(dogf_obs_self, dogf_obs_t, terrain_grid)
             a = a.squeeze(0)
-            ele_ang = a[0].item() * 45
-            azi_ang = a[1].item() * 90
-            dis = 500 + (1 + a[2].item()) * 500
+            ele_ang = a[0].item() * 90
+            azi_ang = a[1].item() * 180
+            dis = 200 + (1 + a[2].item()) * 900
 
             action = dogf2avoidance(ele_ang, azi_ang, dis, terrain_grid, env, fighter, self.avoidance_pi, device = self.device)
         return action
@@ -304,10 +302,10 @@ class DFOPS(object):
         action = [thrust, (load / 9) if load > 0 else (load / 3), omega / 300, rudder]
 
         #高度保护
-        action = rel_height_protection(fighter, action)
+        action = rel_height_protection(fighter, target, action)
         return action
 
-    def cc_ppo_policy(self, env, fighter):
+    def cc_ppo_policy(self, env, fighter, target):
         obs = self.obs_agent.get_obs(fighter, env, 0.1)['DNN']
         obs = torch.as_tensor(obs, dtype=torch.float32)
         with torch.no_grad():
@@ -319,10 +317,10 @@ class DFOPS(object):
         thrust = min(1., max(0.1, action[3]))
 
         action = [thrust, (load / 9) if load > 0 else (load / 3), omega / 300, rudder]
-        action = self.ao.step(fighter, action)
+        action = self.ao.step(fighter, target, action)
         return action
 
-    def cc_ppo_abs_policy(self, env, fighter):
+    def cc_ppo_abs_policy(self, env, fighter, target):
         obs = self.obs_agent.get_obs(fighter, env, 0.1)['DNN']
         obs = torch.as_tensor(obs, dtype=torch.float32)
         with torch.no_grad():
@@ -334,7 +332,7 @@ class DFOPS(object):
         thrust = min(1., max(0.1, action[3]))
 
         action = [thrust, (load / 9) if load > 0 else (load / 3), omega / 300, rudder]
-        action = abs_height_protection(fighter, action)
+        action = abs_height_protection(fighter, target, action)
         return action
 
     def warcraft_policy(self, fighter, target):
@@ -344,7 +342,7 @@ class DFOPS(object):
         thrust = action[2] / 100
         rudder = 0
         action = [thrust, load, omega, rudder]
-        action = abs_height_protection(fighter, action)
+        action = abs_height_protection(fighter, target, action)
         return action
 
 

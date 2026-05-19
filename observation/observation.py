@@ -63,7 +63,7 @@ def get_avoidance_obs(env, fighter, des_ned):
     # ATA
     ati_vec = euler2vector(fighter.fc_data.fRollAngle, fighter.fc_data.fPitchAngle, \
                            fighter.fc_data.fYawAngle)
-    ATA = vector_angle(ati_vec, los_body)
+    ATA = vector_angle(ati_vec, los_ned)
 
     #本机相对高度
     rel_alt = fighter.fc_data.fAltitude - get_elevation(fighter.fc_data.fLatitude, fighter.fc_data.fLongitude)
@@ -132,7 +132,7 @@ def get_dogfight_obs(env, fighter, target):
         t_dist_dot = 0
 
     # 目标三维视线偏置角
-    t_ATA = vector_angle(ati_vec, t_los_body)
+    t_ATA = vector_angle(ati_vec, t_los_ned)
 
     #目标爬升角
     t_v_pitch = target.fc_data.fPathPitchAngle
