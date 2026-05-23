@@ -104,13 +104,13 @@ def reward_func(env, prev_target_bloods ,terminal):
 
     #命中敌机奖励
     if prev_target_bloods != target.combat_data.bloods and target.combat_data.bloods != 3:
-        r_fire = 5 +  2.5 * (prev_target_bloods - target.combat_data.bloods)
+        r_fire = 10
     else:
         r_fire = 0
 
     #降低血量惩罚
-    r_bloods = - ((3 - fighter.combat_data.bloods) / 3)
-
+    # r_bloods = - ((3 - fighter.combat_data.bloods) / 3)
+    r_bloods = 0
     #低空俯冲惩罚
     alt_rel = fighter.fc_data.fAltitude - get_elevation(
         fighter.fc_data.fLatitude,
@@ -138,7 +138,7 @@ def reward_func(env, prev_target_bloods ,terminal):
             draw_reward += 20
 
     if terminal == 1:
-        red_win_reward += 100
+        red_win_reward += 150
     if terminal == 2:
         blue_win_reward -= 100
     if terminal == 3:

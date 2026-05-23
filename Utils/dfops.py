@@ -158,20 +158,39 @@ class DFOPS(object):
         target = env.world.fighters[0]
 
 
-        if self.opponent_list[self.opponent_id]["type"] == "ppg":
-            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib)
 
-        elif self.opponent_list[self.opponent_id]["type"] == "cc_ppo":
-            action = self.cc_ppo_policy(env, fighter, target)
 
-        elif self.opponent_list[self.opponent_id]["type"] == "cc_abs":
-            action = self.cc_ppo_abs_policy(env, fighter, target)
+        # if self.opponent_list[self.opponent_id]["type"] == "ppg":
+        #     action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib)
+        #
+        # elif self.opponent_list[self.opponent_id]["type"] == "cc_ppo":
+        #     action = self.cc_ppo_policy(env, fighter, target)
+        #
+        # elif self.opponent_list[self.opponent_id]["type"] == "cc_abs":
+        #     action = self.cc_ppo_abs_policy(env, fighter, target)
+        #
+        # elif self.opponent_list[self.opponent_id]["type"] == "warcraft":
+        #     action = self.warcraft_policy(fighter, target)
+        #
+        # elif self.opponent_list[self.opponent_id]["type"] == "net":
+        #     ac_model  = self.opponent_list[self.opponent_id]['Pram,net']
+        #     ac_model.eval()
+        #     dogf_obs_self, dogf_obs_t, normal_voxels = get_dogfight_obs(env, fighter, target)
+        #     dogf_obs_self = torch.as_tensor(dogf_obs_self, dtype=torch.float32, device=self.device)
+        #     dogf_obs_t = torch.as_tensor(dogf_obs_t, dtype=torch.float32, device=self.device)
+        #     with torch.no_grad():
+        #         terrain_grid = ac_model.encode_terrain(normal_voxels)
+        #         a, _, _, _ = ac_model.get_action_and_value(dogf_obs_self, dogf_obs_t, terrain_grid)
+        #     a = a.squeeze(0)
+        #     ele_ang = a[0].item() * 90
+        #     azi_ang = a[1].item() * 180
+        #     dis = 200 + (1 + a[2].item()) * 900
+        # if self.opponent_list[self.opponent_id]["type"] == "ppg":
+        #     action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib)
 
-        elif self.opponent_list[self.opponent_id]["type"] == "warcraft":
-            action = self.warcraft_policy(fighter, target)
 
-        elif self.opponent_list[self.opponent_id]["type"] == "net":
-            ac_model  = self.opponent_list[self.opponent_id]['Pram,net']
+        if self.opponent_list[self.opponent_id]["type"] == "net":
+            ac_model = self.opponent_list[self.opponent_id]['Pram,net']
             ac_model.eval()
             dogf_obs_self, dogf_obs_t, normal_voxels = get_dogfight_obs(env, fighter, target)
             dogf_obs_self = torch.as_tensor(dogf_obs_self, dtype=torch.float32, device=self.device)
@@ -182,9 +201,14 @@ class DFOPS(object):
             a = a.squeeze(0)
             ele_ang = a[0].item() * 90
             azi_ang = a[1].item() * 180
-            dis = 200 + (1 + a[2].item()) * 900
+            dis = 400 + (1 + a[2].item()) * 800
+            action = dogf2avoidance(ele_ang, azi_ang, dis, terrain_grid, env, fighter, self.avoidance_pi,
+                                    device=self.device)
 
-            action = dogf2avoidance(ele_ang, azi_ang, dis, terrain_grid, env, fighter, self.avoidance_pi, device = self.device)
+        else:
+            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib)
+
+
         return action
 
 

@@ -50,7 +50,7 @@ def train(args):
             writer = csv.writer(f)
             writer.writerow(
                 ["epoch",  "epi_turn", "step_mean_return" ,"pi_loss", "v_loss", "entropy", "kl", "cf", "red_win", "blue_win", "draw", "red_fall","blue_fall",\
-                 "red_harm", "blue_harm","red_win_rate", "blue_win_rate", "draw_rate", "red_fall_rate", "blue_fall_rate", ])
+                 "red_harm", "blue_harm","red_win_rate", "blue_win_rate", "draw_rate", "red_fall_rate", "blue_fall_rate","policy" ])
 
 
     #tensorboard
@@ -180,7 +180,7 @@ def train(args):
                     a = action.squeeze(0)
                     ele_ang = a[0].item() * 90
                     azi_ang = a[1].item() * 180
-                    dis = 200 + (1 + a[2].item()) * 900
+                    dis = 400 + (1 + a[2].item()) * 800
 
                     #将dogf输出的目标点给到训练好的avoidance网络
                     action = dogf2avoidance(ele_ang, azi_ang, dis, next_terrain_grid, env, env.world.fighters[0], ppo_agent.avoidance_pi)
@@ -364,13 +364,13 @@ def train(args):
                     writer = csv.writer(f)
                     writer.writerow([epoch + args.continue_epoch + 1, np.mean(epi_turns) if len(epi_turns) > 0 else 0.0,np.mean(rms_update_batch), pi_l, v_l, ent, kl, cf, ava_red_win_num.item(),\
                                      avg_blue_win_num.item(), ava_draw_num.item(), ava_red_fall_num.item(), avg_blue_fall_num.item(), ava_red_harm_num.item(), avg_blue_harm_num.item(),\
-                                     ava_red_win_rate, ava_blue_win_rate, ava_draw_rate, ava_red_fall_rate, ava_blue_fall_rate])
+                                     ava_red_win_rate, ava_blue_win_rate, ava_draw_rate, ava_red_fall_rate, ava_blue_fall_rate, dfops.opponent_list[dfops.opponent_id]['type']])
             else:
                 with open(file_name, "a", newline = '') as f:
                     writer = csv.writer(f)
                     writer.writerow([epoch, np.mean(epi_turns) if len(epi_turns) > 0 else 0.0,np.mean(rms_update_batch), pi_l, v_l, ent, kl, cf,\
                                      ava_red_win_num.item(), avg_blue_win_num.item(), ava_draw_num.item(), ava_red_fall_num.item(), avg_blue_fall_num.item(),ava_red_harm_num.item(), avg_blue_harm_num.item(),\
-                                     ava_red_win_rate, ava_blue_win_rate, ava_draw_rate, ava_red_fall_rate, ava_blue_fall_rate])
+                                     ava_red_win_rate, ava_blue_win_rate, ava_draw_rate, ava_red_fall_rate, ava_blue_fall_rate,dfops.opponent_list[dfops.opponent_id]['type']])
 
             print("epoch:", epoch if not args.continue_train else epoch + args.continue_epoch + 1,"step_mean_return:", np.mean(rms_update_batch), "epi_return:", float(epi_mean_turns), "pi_loss:", pi_l,\
                   "v_loss:", v_l, "entropy:", ent, "kl:", kl, "cf:", cf)
@@ -403,7 +403,7 @@ def init_process(rank, size, pargs, fn, backend = 'gloo'):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--seed', type=int, default=519)
+    parser.add_argument('--seed', type=int, default=522)
     parser.add_argument('--model_dir', type=str, default=".\\output")
 
     parser.add_argument('--epoch_train_iters', type=int, default=4)
@@ -413,7 +413,7 @@ if __name__ == '__main__':
     parser.add_argument('--target_kl', type=float, default=0.01)
 
     parser.add_argument('--per_steps', type=int, default=4096)
-    parser.add_argument('--procs', type=int, default=3)
+    parser.add_argument('--procs', type=int, default=4)
     parser.add_argument('--num_minibatches', type=int, default=8)
 
     parser.add_argument('--lr', type=float, default=2.5e-4)
