@@ -221,7 +221,7 @@ class DFOPS(object):
 
                 else:
                     pass
-        if ((avg_proc_win_rate / (avg_proc_op_win + 0.001)) > 1.05) and (epoch % 100 == 0) and (epoch != 0 ):
+        if ((avg_proc_win_rate / (avg_proc_op_win + 0.001)) > 1.05) and (epoch % 50 == 0) and (epoch >= 100):
             # 随机初始化的网络
             new_opponent_dict = {"type":"net",
                                 "ManeuverLib": False,
@@ -260,10 +260,14 @@ class DFOPS(object):
                     new_opponent_dict["index"] = sfpid
             self.append_new_opponent(new_opponent_dict, init_score=0.5)
             if all([op['ManeuverLib'] ==  False for op in self.opponent_list]):
-                self.opponent_list[0]['ManeuverLib'] = True
-                self.opponent_list[0]['Pram,net'] = 0.08
-                self.opponent_list[0]['index'] = 0
-                self.opponent_list[0]['type'] = np.random.choice(["ppg", "cc_ppo", "cc_abs", "warcraft"])
+                rule_type = np.random.choice(["ppg", "cc_ppo", "cc_abs", "warcraft"])
+
+                self.opponent_list[0] = {
+                    "type": rule_type,
+                    "ManeuverLib": True,
+                    "Pram,net": 0.08,
+                    "index": 0,
+                }
 
                 # 新插入的策略重新按 0.5 初始化
                 self.sample_scores[0] = 0.5
@@ -319,14 +323,13 @@ class DFOPS(object):
 
         #ppg策略
         thrust, load, omega, rudder = maneuver_lib.kar_ppg(fighter, kar = kar, k = 0.9, target_los = [l_n, l_e, l_d])
-        thrust = min(1., max(0.1, thrust))
-        load = min(9., max(-3., load))
-        omega = min(300., max(-300., omega))
-        rudder = min(1., max(-1., rudder))
         action = [thrust, (load / 9) if load > 0 else (load / 3), omega / 300, rudder]
 
         #高度保护
-        action = rel_height_protection(fighter, target, action)
+        if self.opponent_id < 2:
+            action = rel_height_protection(fighter, target, action)
+        else:
+            action = abs_height_protection(fighter, target, action)
         return action
 
     def cc_ppo_policy(self, env, fighter, target):

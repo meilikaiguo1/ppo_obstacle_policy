@@ -69,8 +69,14 @@ def reward_func(env, prev_target_bloods ,terminal):
 
 
     #相对位置奖励
-    r_rel_pos = 0.2 * ((ATA / 180 - 2) * 0.5 * (-logistic(AA / 180, 18, 1 / 6) + logistic(AA / 180, 18, 5 / 6))
-                       - ATA / 180 - 1)
+    # r_rel_pos = 0.2 * ((ATA / 180 - 2) * 0.5 * (-logistic(AA / 180, 18, 1 / 6) + logistic(AA / 180, 18, 5 / 6))
+    #                    - ATA / 180 - 1)
+
+    ata_score = 1 - logistic(ATA, 0.12, 35)  # ATA 小，得分高
+    aa_score = 1 - logistic(AA, 0.08, 80)  # AA小更像尾追优势
+
+    # [-0.2, +0.193]
+    r_rel_pos = 0.4 * ata_score * aa_score - 0.2
 
     #瞄准奖励
     pitch_err, roll_err = ati_btt_guide.get_err(
@@ -83,12 +89,18 @@ def reward_func(env, prev_target_bloods ,terminal):
                                fighter.fc_data.fRollAngle)
     los_pitch_body = np.rad2deg(-np.arctan2(los_vec_body[2], np.linalg.norm(los_vec_body[0:2])))
     los_yaw_body = np.rad2deg(np.arctan2(los_vec_body[1], los_vec_body[0]))
-    r_los_body = - 0.9 * (0.2 * ((los_yaw_body / 180) ** 2) + 1.2 * ((pitch_err / 180) ** 2) + 0.2 * ((roll_err / 180) ** 2))
+
+    #[-0.7, 0]
+    r_los_body = - 0.5 * (0.2 * ((los_yaw_body / 180) ** 2) + 1.0 * ((pitch_err / 180) ** 2) + 0.2 * ((roll_err / 180) ** 2))
 
     #接近率奖励
-    r_closure = logistic(dist_dot, 0.016, -50) * (- logistic(dist, 0.0029, 7000))
+    # r_closure = 2 * logistic(dist_dot, 0.016, -50) * (- logistic(dist, 0.0029, 7000))
+
+    #[-0.4, +0.25]
+    r_closure = 0.25 * np.tanh((-dist_dot - 50.0) / 200.0) - 0.15 * logistic(dist, 0.0015, 9000)
 
     # 低速 + 大攻角惩罚（防止失速）
+    #[-2, 0]
     r_ma_alpha = 1. * ((2 * logistic(fighter.fc_data.fMachNumber, 12., 0.3) - 2) *
                        logistic(fighter.fc_data.fAttackAngle, 0.86, 28))
 
@@ -96,7 +108,8 @@ def reward_func(env, prev_target_bloods ,terminal):
     pitch_rate_risk = logistic(abs(fighter.fc_data.fPitchRate), 0.15, 25.0)
     roll_rate_risk = logistic(abs(fighter.fc_data.fRollRate), 0.032, 75.0) - 0.08
     normal_load_risk = logistic(abs(fighter.fc_data.fNormalLoad), 1.0, 7.0)
-    r_stability = - 0.8 * (
+    #[-0.581, -0.006]
+    r_stability = - 0.4 * (
         0.5 * pitch_rate_risk +
         0.6 * roll_rate_risk +
         0.4 * normal_load_risk
@@ -116,7 +129,8 @@ def reward_func(env, prev_target_bloods ,terminal):
         fighter.fc_data.fLatitude,
         fighter.fc_data.fLongitude,
     )
-    r_alt = - 2 * (1 - logistic(alt_rel, 0.009, 0)) * logistic(
+    #[-2, 0]
+    r_alt = - 2 * (1 - logistic(alt_rel, 0.003, 0)) * logistic(
         fighter.fc_data.fVerticalVelocity,
         0.18,
         40,
@@ -131,24 +145,24 @@ def reward_func(env, prev_target_bloods ,terminal):
 
     if terminal == 0:
         if env.world.fighters[0].combat_data.bloods > env.world.fighters[1].combat_data.bloods:
-            red_win_reward += 50
+            red_win_reward += 250
         elif env.world.fighters[0].combat_data.bloods < env.world.fighters[1].combat_data.bloods:
-            blue_win_reward -= 50
+            blue_win_reward -= 250
         else:
-            draw_reward += 20
+            draw_reward -= 50
 
     if terminal == 1:
-        red_win_reward += 150
+        red_win_reward += 500
     if terminal == 2:
-        blue_win_reward -= 100
+        blue_win_reward -= 500
     if terminal == 3:
-        draw_reward += 20
+        draw_reward -= 50
     if terminal == 4:
-        blue_win_reward -= 50
-        red_fall_reward -= 50
+        blue_win_reward -= 250
+        red_fall_reward -= 250
     if terminal == 5:
-        red_win_reward += 50
-        blue_fall_reward += 50
+        red_win_reward += 200
+        blue_fall_reward += 200
 
     #奖励明细，便于记录分析
     reward_info = {

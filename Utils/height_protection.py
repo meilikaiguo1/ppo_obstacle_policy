@@ -55,7 +55,7 @@ def attitude_trace(fc_data, delta_pos):
 
     return action
 
-def abs_height_protection(fighter, target, control_input, abs_height = 5000):
+def abs_height_protection(fighter, target, control_input, abs_height = 5200):
     # 高度大于绝对高度时，不进行高度保护
     if fighter.fc_data.fAltitude > abs_height:
         return control_input

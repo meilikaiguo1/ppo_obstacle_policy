@@ -6,21 +6,26 @@ def logistic(x, growth_rate, mid_point):
     z = -growth_rate * (x - mid_point)
     return np.where(z > 700, 0, 1 / (1 + np.exp(z)))
 
+# (1 - logistic(alt_rel, 0.009, 0)) * logistic(
+#         fighter.fc_data.fVerticalVelocity,
+#         0.18,
+#         40,
+#     )
 
 # 参数设置
-growth_rate = 0.032
-mid_point = 75
+growth_rate = 0.12
+mid_point = 35
 
 # print(logistic(2000, growth_rate, mid_point) - 1.0)
 # print(logistic(1000, growth_rate, mid_point) - 1.0)
 # 横坐标范围
-x = np.linspace(-200, 200, 10)
+x = np.linspace(0, 180, 10)
 y = logistic(x, growth_rate, mid_point)
 print(logistic(0, growth_rate, mid_point))
 
 # 绘图
 plt.figure(figsize=(8, 5))
-plt.plot(x, y, linewidth=2, label=f'growth_rate={growth_rate}, mid_point={mid_point}')
+plt.plot(x, 1 - y, linewidth=2, label=f'growth_rate={growth_rate}, mid_point={mid_point}')
 plt.axvline(mid_point, linestyle='--', linewidth=1.5, label=f'mid_point={mid_point}')
 plt.xlabel("x")
 plt.ylabel("logistic(x)")
