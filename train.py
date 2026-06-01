@@ -403,7 +403,7 @@ def init_process(rank, size, pargs, fn, backend = 'gloo'):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--seed', type=int, default=525)
+    parser.add_argument('--seed', type=int, default=528)
     parser.add_argument('--model_dir', type=str, default=".\\output")
 
     parser.add_argument('--epoch_train_iters', type=int, default=4)
@@ -449,12 +449,12 @@ if __name__ == '__main__':
     parser.add_argument('--voxel_mlp_ckpt', type=str,
                         default='./output/pretrain_voxel_mlp/voxel_mlp_pretrained_best.pt')
 
-    parser.add_argument('--continue_train', type=bool, default=False)
-    parser.add_argument('--continue_epoch', type=int, default=0)
+    parser.add_argument('--continue_train', type=bool, default=True)
+    parser.add_argument('--continue_epoch', type=int, default=425)
     parser.add_argument('--continue_sf', type=bool, default=False)
-    parser.add_argument('--sf_history_index', type=int, default=0) #储存的历史网络策略数量
-    parser.add_argument('--history_sf_num', type=int, default=0)  #策略池中历史网络策略数量
-    parser.add_argument('--history_start_index', type=int, default=0) #加载的历史网络策略起始编号
+    parser.add_argument('--sf_history_index', type=int, default=9) #储存的历史网络策略数量
+    parser.add_argument('--history_sf_num', type=int, default=2)  #策略池中历史网络策略数量
+    parser.add_argument('--history_start_index', type=int, default=1) #加载的历史网络策略起始编号
 
 
 

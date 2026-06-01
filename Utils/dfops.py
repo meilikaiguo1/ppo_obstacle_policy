@@ -65,9 +65,9 @@ class DFOPS(object):
         # 对手策略集
         self.opponent_list = [
             {"type": "ppg", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 0},
-            {"type": "cc_ppo", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 1},
-            {"type": "cc_abs", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 2},
-            {"type": "warcraft", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 3},
+            {"type": "ppg-rel", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 1},
+            {"type": "ppg-abs", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 2},
+            {"type": "ppg-ao", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 3},
         ]
         self.self_play_index = 1
 
@@ -160,36 +160,19 @@ class DFOPS(object):
 
 
 
-        # if self.opponent_list[self.opponent_id]["type"] == "ppg":
-        #     action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib)
-        #
-        # elif self.opponent_list[self.opponent_id]["type"] == "cc_ppo":
-        #     action = self.cc_ppo_policy(env, fighter, target)
-        #
-        # elif self.opponent_list[self.opponent_id]["type"] == "cc_abs":
-        #     action = self.cc_ppo_abs_policy(env, fighter, target)
-        #
-        # elif self.opponent_list[self.opponent_id]["type"] == "warcraft":
-        #     action = self.warcraft_policy(fighter, target)
-        #
-        # elif self.opponent_list[self.opponent_id]["type"] == "net":
-        #     ac_model  = self.opponent_list[self.opponent_id]['Pram,net']
-        #     ac_model.eval()
-        #     dogf_obs_self, dogf_obs_t, normal_voxels = get_dogfight_obs(env, fighter, target)
-        #     dogf_obs_self = torch.as_tensor(dogf_obs_self, dtype=torch.float32, device=self.device)
-        #     dogf_obs_t = torch.as_tensor(dogf_obs_t, dtype=torch.float32, device=self.device)
-        #     with torch.no_grad():
-        #         terrain_grid = ac_model.encode_terrain(normal_voxels)
-        #         a, _, _, _ = ac_model.get_action_and_value(dogf_obs_self, dogf_obs_t, terrain_grid)
-        #     a = a.squeeze(0)
-        #     ele_ang = a[0].item() * 90
-        #     azi_ang = a[1].item() * 180
-        #     dis = 200 + (1 + a[2].item()) * 900
-        # if self.opponent_list[self.opponent_id]["type"] == "ppg":
-        #     action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib)
+        if self.opponent_list[self.opponent_id]["type"] == "ppg":
+            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib, 0)
 
+        elif self.opponent_list[self.opponent_id]["type"] == "ppg-rel":
+            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib, 1)
 
-        if self.opponent_list[self.opponent_id]["type"] == "net":
+        elif self.opponent_list[self.opponent_id]["type"] == "ppg-abs":
+            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib, 2)
+
+        elif self.opponent_list[self.opponent_id]["type"] == "ppg-ao":
+            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib, 3)
+
+        elif self.opponent_list[self.opponent_id]["type"] == "net":
             ac_model = self.opponent_list[self.opponent_id]['Pram,net']
             ac_model.eval()
             dogf_obs_self, dogf_obs_t, normal_voxels = get_dogfight_obs(env, fighter, target)
@@ -204,9 +187,6 @@ class DFOPS(object):
             dis = 400 + (1 + a[2].item()) * 800
             action = dogf2avoidance(ele_ang, azi_ang, dis, terrain_grid, env, fighter, self.avoidance_pi,
                                     device=self.device)
-
-        else:
-            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib)
 
 
         return action
@@ -234,6 +214,7 @@ class DFOPS(object):
                     new_opponent_dict['ManeuverLib'] = True
                     new_opponent_dict['Pram,net'] = self.opponent_list[-1]['Pram,net']
                     new_opponent_dict["index"] = self.opponent_list[-1]['index']
+                    new_opponent_dict["type"] = np.random.choice(["ppg", "ppg-rel", "ppg-abs", "ppg-ao"])
 
                 else:
                     if (history_index > 0) and (self.self_play_index < history_index):
@@ -260,7 +241,7 @@ class DFOPS(object):
                     new_opponent_dict["index"] = sfpid
             self.append_new_opponent(new_opponent_dict, init_score=0.5)
             if all([op['ManeuverLib'] ==  False for op in self.opponent_list]):
-                rule_type = np.random.choice(["ppg", "cc_ppo", "cc_abs", "warcraft"])
+                rule_type = np.random.choice(["ppg", "ppg-rel", "ppg-abs", "ppg-ao"])
 
                 self.opponent_list[0] = {
                     "type": rule_type,
@@ -312,7 +293,7 @@ class DFOPS(object):
         ])
 
 
-    def ppg_policy(self,fighter, target, kar, maneuver_lib):
+    def ppg_policy(self,fighter, target, kar, maneuver_lib, type):
 
         #计算视线
         l_n, l_e, l_d = wgs84ToNED(target.fc_data.fLatitude, target.fc_data.fLongitude,
@@ -323,13 +304,21 @@ class DFOPS(object):
 
         #ppg策略
         thrust, load, omega, rudder = maneuver_lib.kar_ppg(fighter, kar = kar, k = 0.9, target_los = [l_n, l_e, l_d])
+        thrust = min(1., max(0.1, thrust))
+        load = min(9., max(-3., load))
+        omega = min(300., max(-300., omega))
+        rudder = min(1., max(-1., rudder))
         action = [thrust, (load / 9) if load > 0 else (load / 3), omega / 300, rudder]
 
         #高度保护
-        if self.opponent_id < 2:
+        if type == 0:
+            action = action
+        elif type == 1:
             action = rel_height_protection(fighter, target, action)
-        else:
+        elif type == 2:
             action = abs_height_protection(fighter, target, action)
+        elif type == 3:
+            action = self.ao.step(fighter, target, action)
         return action
 
     def cc_ppo_policy(self, env, fighter, target):

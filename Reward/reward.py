@@ -69,14 +69,11 @@ def reward_func(env, prev_target_bloods ,terminal):
 
 
     #相对位置奖励
-    # r_rel_pos = 0.2 * ((ATA / 180 - 2) * 0.5 * (-logistic(AA / 180, 18, 1 / 6) + logistic(AA / 180, 18, 5 / 6))
+    # r_rel_pos = 0.5 * ((ATA / 180 - 2) * 0.5 * (-logistic(AA / 180, 18, 1 / 6) + logistic(AA / 180, 18, 5 / 6))
     #                    - ATA / 180 - 1)
 
-    ata_score = 1 - logistic(ATA, 0.12, 35)  # ATA 小，得分高
-    aa_score = 1 - logistic(AA, 0.08, 80)  # AA小更像尾追优势
+    r_rel_pos = 0.3 * (np.cos(np.deg2rad(ATA)) - 0.5 * np.cos(np.deg2rad(180 - abs(AA))))
 
-    # [-0.2, +0.193]
-    r_rel_pos = 0.4 * ata_score * aa_score - 0.2
 
     #瞄准奖励
     pitch_err, roll_err = ati_btt_guide.get_err(
@@ -91,7 +88,9 @@ def reward_func(env, prev_target_bloods ,terminal):
     los_yaw_body = np.rad2deg(np.arctan2(los_vec_body[1], los_vec_body[0]))
 
     #[-0.7, 0]
-    r_los_body = - 0.5 * (0.2 * ((los_yaw_body / 180) ** 2) + 1.0 * ((pitch_err / 180) ** 2) + 0.2 * ((roll_err / 180) ** 2))
+    # r_los_body = - 0.5 * (0.2 * ((los_yaw_body / 180) ** 2) + 1.0 * ((pitch_err / 180) ** 2) + 0.2 * ((roll_err / 180) ** 2))
+
+    r_los_body = 0.7 * np.cos(np.deg2rad(pitch_err)) - 0.1 * (abs(roll_err) / 180.0)
 
     #接近率奖励
     # r_closure = 2 * logistic(dist_dot, 0.016, -50) * (- logistic(dist, 0.0029, 7000))
@@ -117,7 +116,7 @@ def reward_func(env, prev_target_bloods ,terminal):
 
     #命中敌机奖励
     if prev_target_bloods != target.combat_data.bloods and target.combat_data.bloods != 3:
-        r_fire = 10
+        r_fire = 50
     else:
         r_fire = 0
 
@@ -161,8 +160,8 @@ def reward_func(env, prev_target_bloods ,terminal):
         blue_win_reward -= 250
         red_fall_reward -= 250
     if terminal == 5:
-        red_win_reward += 200
-        blue_fall_reward += 200
+        red_win_reward += 150
+        blue_fall_reward += 150
 
     #奖励明细，便于记录分析
     reward_info = {
