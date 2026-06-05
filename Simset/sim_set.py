@@ -64,7 +64,7 @@ def make_sim_env(pargs):
     return env, sim_in_list
 
 
-def Reset(env, op_id,sim_set_dict = None):
+def Reset(env, blue_control_model, sim_set_dict = None):
     if sim_set_dict is None:
         # 载机高度、马赫数、导弹发射俯仰角 # 目标距离、安稳系下视线方位角、高低角 # 目标航向、马赫数
         # TODO：依据场景修改这里每个变量的随机范围
@@ -117,6 +117,6 @@ def Reset(env, op_id,sim_set_dict = None):
     #重置油量
     env.initial_data.FuelKg = [0.8 * 3000, 0.8 * 3000]
 
-    env.reset(op_id)
+    env.reset(blue_control_model)
     return
 

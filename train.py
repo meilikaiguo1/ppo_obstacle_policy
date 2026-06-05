@@ -96,8 +96,8 @@ def train(args):
 
 
     # reset
-    dfops.meta_solver()
-    Reset(env, dfops.opponent_id)
+    blue_control_model = dfops.meta_solver()
+    Reset(env, blue_control_model)
     maneuver_lib.reset_lib()
 
     #获取初始观测
@@ -225,8 +225,8 @@ def train(args):
                 red_win_num, blue_win_num, draw_num, red_fall_num, blue_fall_num, red_harm_num, blue_harm_num = win_rate(env, dfops, terminal, red_win_num, blue_win_num, draw_num, red_fall_num, blue_fall_num, red_harm_num, blue_harm_num)
 
                 #reset
-                dfops.meta_solver()
-                Reset(env, dfops.opponent_id)
+                blue_control_model = dfops.meta_solver()
+                Reset(env, blue_control_model)
                 maneuver_lib.reset_lib()
                 next_obs_self, next_obs_target, next_terrain_voxel = get_dogfight_obs(env, env.world.fighters[0], env.world.fighters[1])
 
@@ -346,7 +346,7 @@ def train(args):
                 )
                 torch.save(ppo_agent.actor_critic, self_play_name)
             history_index += 1
-        dfops.update_opponent_list(epoch, ava_red_win_rate, ava_blue_win_rate, history_index)
+        dfops.update_opponent_list(global_epoch, ava_red_win_rate, ava_blue_win_rate, history_index)
 
 
         #记录训练曲线
@@ -428,7 +428,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_grad_norm', type=float, default=0.5)
     parser.add_argument('--clip_vloss', type=bool, default=True)
 
-    parser.add_argument('--init_kar', type=float, default=0.20)
+    parser.add_argument('--init_kar', type=float, default=0.08)
 
     parser.add_argument('--avo_obs_self_dim', type=int, default=20)
     parser.add_argument('--avoidance_act_dim', type=int, default=4)
@@ -450,11 +450,11 @@ if __name__ == '__main__':
                         default='./output/pretrain_voxel_mlp/voxel_mlp_pretrained_best.pt')
 
     parser.add_argument('--continue_train', type=bool, default=True)
-    parser.add_argument('--continue_epoch', type=int, default=425)
-    parser.add_argument('--continue_sf', type=bool, default=False)
-    parser.add_argument('--sf_history_index', type=int, default=9) #储存的历史网络策略数量
-    parser.add_argument('--history_sf_num', type=int, default=2)  #策略池中历史网络策略数量
-    parser.add_argument('--history_start_index', type=int, default=1) #加载的历史网络策略起始编号
+    parser.add_argument('--continue_epoch', type=int, default=685)
+    parser.add_argument('--continue_sf', type=bool, default=True)
+    parser.add_argument('--sf_history_index', type=int, default=14) #储存的历史网络策略数量
+    parser.add_argument('--history_sf_num', type=int, default=0)  #策略池中历史网络策略数量
+    parser.add_argument('--history_start_index', type=int, default=5) #加载的历史网络策略起始编号
 
 
 

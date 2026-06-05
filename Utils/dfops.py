@@ -64,10 +64,10 @@ class DFOPS(object):
 
         # 对手策略集
         self.opponent_list = [
-            {"type": "ppg", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 0},
-            {"type": "ppg-rel", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 1},
-            {"type": "ppg-abs", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 2},
-            {"type": "ppg-ao", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 3},
+            {"type": "warcraft", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 0},
+            {"type": "warcraft-rel", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 1},
+            {"type": "warcraft-abs", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 2},
+            {"type": "warcraft-ao", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 3},
         ]
         self.self_play_index = 1
 
@@ -131,6 +131,7 @@ class DFOPS(object):
         胜率越接近 0.5，采样概率越高；
         胜率接近 0 或 1，采样概率越低。
         '''
+        control_model = 0
         self.epi_count += 1
         self.ao.reset()
 
@@ -147,10 +148,13 @@ class DFOPS(object):
         #归一化成概率
         probs = weights / np.sum(weights)
         self.opponent_id = random.choices(np.arange(len(probs)), weights=probs, k=1)[0]
-        if self.opponent_list[self.opponent_id]["type"] == 'warcraft':
+        if self.opponent_list[self.opponent_id]["type"] == 'warcraft' or self.opponent_list[self.opponent_id]["type"] == 'warcraft-abs' or self.opponent_list[self.opponent_id]["type"] == 'warcraft-rel' \
+                or self.opponent_list[self.opponent_id]["type"] == 'warcraft-ao':
             self.warcraft.policy_reset()
+            control_model = 3
         if self.pid == 0:
             print(f'当前对手策略为 = {self.opponent_list[self.opponent_id]["type"]}')
+        return control_model
 
 
     def sampled_policy(self, env, maneuver_lib):
@@ -160,17 +164,17 @@ class DFOPS(object):
 
 
 
-        if self.opponent_list[self.opponent_id]["type"] == "ppg":
-            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib, 0)
+        if self.opponent_list[self.opponent_id]["type"] == "warcraft":
+            action = self.warcraft_policy(fighter, target,  0)
 
-        elif self.opponent_list[self.opponent_id]["type"] == "ppg-rel":
-            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib, 1)
+        elif self.opponent_list[self.opponent_id]["type"] == "warcraft-rel":
+            action = self.warcraft_policy(fighter, target, 1)
 
-        elif self.opponent_list[self.opponent_id]["type"] == "ppg-abs":
-            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib, 2)
+        elif self.opponent_list[self.opponent_id]["type"] == "warcraft-abs":
+            action = self.warcraft_policy(fighter, target,  2)
 
-        elif self.opponent_list[self.opponent_id]["type"] == "ppg-ao":
-            action = self.ppg_policy(fighter, target, self.opponent_list[self.opponent_id]["Pram,net"],maneuver_lib, 3)
+        elif self.opponent_list[self.opponent_id]["type"] == "warcraft-ao":
+            action = self.warcraft_policy(fighter, target, 3)
 
         elif self.opponent_list[self.opponent_id]["type"] == "net":
             ac_model = self.opponent_list[self.opponent_id]['Pram,net']
@@ -187,7 +191,6 @@ class DFOPS(object):
             dis = 400 + (1 + a[2].item()) * 800
             action = dogf2avoidance(ele_ang, azi_ang, dis, terrain_grid, env, fighter, self.avoidance_pi,
                                     device=self.device)
-
 
         return action
 
@@ -214,7 +217,7 @@ class DFOPS(object):
                     new_opponent_dict['ManeuverLib'] = True
                     new_opponent_dict['Pram,net'] = self.opponent_list[-1]['Pram,net']
                     new_opponent_dict["index"] = self.opponent_list[-1]['index']
-                    new_opponent_dict["type"] = np.random.choice(["ppg", "ppg-rel", "ppg-abs", "ppg-ao"])
+                    new_opponent_dict["type"] = np.random.choice(["warcraft", "warcraft-rel", "warcraft-abs", "warcraft-ao"])
 
                 else:
                     if (history_index > 0) and (self.self_play_index < history_index):
@@ -241,7 +244,7 @@ class DFOPS(object):
                     new_opponent_dict["index"] = sfpid
             self.append_new_opponent(new_opponent_dict, init_score=0.5)
             if all([op['ManeuverLib'] ==  False for op in self.opponent_list]):
-                rule_type = np.random.choice(["ppg", "ppg-rel", "ppg-abs", "ppg-ao"])
+                rule_type = np.random.choice(["warcraft", "warcraft-rel", "warcraft-abs", "warcraft-ao"])
 
                 self.opponent_list[0] = {
                     "type": rule_type,
@@ -351,15 +354,23 @@ class DFOPS(object):
         action = abs_height_protection(fighter, target, action)
         return action
 
-    def warcraft_policy(self, fighter, target):
+    def warcraft_policy(self, fighter, target, type):
         action = self.warcraft.aircraft(fighter, target)
         load = action[0] / 9 if action[0] > 0 else (action[0] / 3)
         omega = action[1] / 300
         thrust = action[2] / 100
         rudder = 0
         action = [thrust, load, omega, rudder]
-        action = abs_height_protection(fighter, target, action)
+        if type == 0:
+            action = action
+        elif type == 1:
+            action = rel_height_protection(fighter, target, action)
+        elif type == 2:
+            action = abs_height_protection(fighter, target, action)
+        elif type == 3:
+            action = self.ao.step(fighter, target, action)
         return action
+
 
 
 

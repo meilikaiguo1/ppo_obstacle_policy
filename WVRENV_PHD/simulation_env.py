@@ -69,19 +69,17 @@ class CombatEnv(object):
             self.visual_tcp = TcpRender(42674)
             self.visual_tcp.send_head()
 
-        self.reset()
+        self.reset(0)
 
-    def reset(self, op_id = 0):
+    def reset(self, blue_control_mode):
         """
         重置函数
         """
         self.time_count = 0
         self.epoch += 1
 
-        if op_id == 3:
-            self.world.fighters[1].control_mode = ControlMode(3)
-        else:
-            self.world.fighters[1].control_mode = ControlMode(0)
+        self.world.fighters[1].control_mode =ControlMode(blue_control_mode)
+
 
         # 重置每架飞机的初始位置,初始速度
         for i, fighter in enumerate(self.world.fighters):
