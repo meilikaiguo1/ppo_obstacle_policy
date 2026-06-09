@@ -242,7 +242,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_dir", type=str, default="./output")
-    parser.add_argument("--seed", type=int, default=410)
+    parser.add_argument("--seed", type=int, default=65)
     parser.add_argument("--procs", type=int, default=20)
 
     # 每个进程自己的目标数量

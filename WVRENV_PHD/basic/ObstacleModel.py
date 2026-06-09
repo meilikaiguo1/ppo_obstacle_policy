@@ -14,18 +14,29 @@ sensor_pargs = [10, 2000, 1, 10]
 SAMPLES = 1201
 f_name = "./N32E096.hgt"
 
-# 预先加载地形高程数据到内存
-with open(f_name, 'rb') as hgt_data:
-    elevations = np.fromfile(hgt_data, np.dtype('>i2'), SAMPLES * SAMPLES).reshape((SAMPLES, SAMPLES))
-
-# 预计算经纬度列表
 originLongitude = 96
 originLatitude = 32
-Latitude_list = np.arange(originLatitude, originLatitude + 1 / 1200 + 1, 1 / 1200).tolist()  # 纬度
-Longitude_list = np.arange(originLongitude, originLongitude + 1 + 1 / 1200, 1 / 1200).tolist()  # 经度
 
-# 将高程数据转换为列表以便插值
-elevations_list = elevations.tolist()
+# 读取 HGT 原始高程
+with open(f_name, 'rb') as hgt_data:
+    elevations_raw = np.fromfile(
+        hgt_data,
+        np.dtype('>i2'),
+        SAMPLES * SAMPLES
+    ).reshape((SAMPLES, SAMPLES))
+
+# =========================================================
+# 关键修改：
+# HGT 文件第一行通常对应北侧，也就是 33°N；
+# 但是这里 Latitude_list 使用 32 -> 33 递增，
+# 所以必须将 elevations_raw 上下翻转。
+# =========================================================
+elevations = np.flipud(elevations_raw)
+
+Latitude_list = np.linspace(originLatitude, originLatitude + 1, SAMPLES)
+Longitude_list = np.linspace(originLongitude, originLongitude + 1, SAMPLES)
+
+# 地形插值器
 elev_interpolator = RegularGridInterpolator(
     (Latitude_list, Longitude_list),
     elevations,
@@ -34,12 +45,12 @@ elev_interpolator = RegularGridInterpolator(
     fill_value=None
 )
 
+
 def get_elevation(lat, lon):
-    # 查询单个点时也可以调用插值器
-    return elev_interpolator([[lat, lon]])[0]
+    return float(elev_interpolator([[lat, lon]])[0])
+
 
 def get_elevation_batch(latitudes, longitudes):
-    # 将多个查询点组合成 (N,2) 的数组，一次性插值
     query_points = np.column_stack((latitudes, longitudes))
     return elev_interpolator(query_points)
 
@@ -83,7 +94,7 @@ for i in range(len(Latitude_list)):
         data = {
             "latitude": Latitude_list[i],
             "longitude": Longitude_list[j],
-            "elevation": elevations_list[i][j]
+            "elevation": elevations[i][j]
         }
         data_list.append(data)
 
@@ -91,17 +102,24 @@ points = np.array([[point["latitude"], point["longitude"]] for point in data_lis
 tree = KDTree(points)
 
 
-def get_obstacle_points(lat,lon):
-    current_point=np.array([lat,lon])
-    radius=0.005
-    #查找半径内的点
-    indices=tree.query_ball_point(current_point,radius)
-    #获取附近的点
-    nearby_points=[data_list[i] for i in indices]
-    if not nearby_points:
-        return np.empty((0, 3))
-    nearby_points=np.array([[point["latitude"], point["longitude"], point['elevation']] for point in nearby_points])
-    return nearby_points
+def wgs84_to_ned_batch(wgs84_coords):
+    """
+    wgs84_coords: shape = [N, 3]
+    每一行为 [lat, lon, alt]
+    返回 NED: [north, east, down]
+    """
+    wgs84_coords = np.asarray(wgs84_coords, dtype=np.float64)
+
+    if wgs84_coords.ndim != 2 or wgs84_coords.shape[1] != 3:
+        return np.empty((0, 3), dtype=np.float64)
+
+    ned_coords = []
+
+    for lat, lon, alt in wgs84_coords:
+        north, east, down = wgs84ToNED(lat, lon, alt)
+        ned_coords.append([north, east, down])
+
+    return np.asarray(ned_coords, dtype=np.float64)
 
 
 class ObstacleEncoder:
@@ -266,10 +284,9 @@ def NeedtoAvoidObstacle(fighter):
     current_ned = fighter.state.ned_Pos
 
 
-
     v_range = 0.0
     dis_obstacle = 3000.0
-    f_range = 900 * 1.3
+    f_range = 1000 * 1.5
     n_range = 100
     step_range = f_range / n_range
     alt_f = fighter.fc_data.fAltitude
@@ -277,15 +294,15 @@ def NeedtoAvoidObstacle(fighter):
     if v_lon == None:
         return 0.0
     else:
-        v_n, v_e, v_d = wgs84ToNED(v_lon, v_lat, v_ele)
+        v_n, v_e, v_d = wgs84ToNED(v_lat, v_lon, v_ele)
         los_vec = [v_n - current_ned[0], v_e - current_ned[1], v_d - current_ned[2]]
         distance = np.linalg.norm(los_vec)
 
-        delta_ele2 = distance * math.sin(fighter.fc_data.fPathPitchAngle) - (alt_f - v_ele)
-        x_tmp = delta_ele2 * math.cos(fighter.fc_data.fPathPitchAngle)
+        delta_ele2 = distance * math.sin(np.deg2rad(fighter.fc_data.fPathPitchAngle)) - (alt_f - v_ele)
+        x_tmp = delta_ele2 * math.cos(np.deg2rad(fighter.fc_data.fPathPitchAngle))
         inside_sqrt = turning_radius ** 2  - (turning_radius - x_tmp)**2
         inside_sqrt = max(inside_sqrt, 0.0)
-        tan_pp = math.tan(fighter.fc_data.fPathPitchAngle)
+        tan_pp = math.tan(np.deg2rad(fighter.fc_data.fPathPitchAngle))
         if abs(tan_pp) < 1e-8:
             d_tmp = float("inf")
         else:

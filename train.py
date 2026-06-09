@@ -50,7 +50,7 @@ def train(args):
             writer = csv.writer(f)
             writer.writerow(
                 ["epoch",  "epi_turn", "step_mean_return" ,"pi_loss", "v_loss", "entropy", "kl", "cf", "red_win", "blue_win", "draw", "red_fall","blue_fall",\
-                 "red_harm", "blue_harm","red_win_rate", "blue_win_rate", "draw_rate", "red_fall_rate", "blue_fall_rate","policy" ])
+                 "red_harm", "blue_harm","red_win_rate", "blue_win_rate", "draw_rate", "red_fall_rate", "blue_fall_rate","policy", "kar" ])
 
 
     #tensorboard
@@ -364,13 +364,13 @@ def train(args):
                     writer = csv.writer(f)
                     writer.writerow([epoch + args.continue_epoch + 1, np.mean(epi_turns) if len(epi_turns) > 0 else 0.0,np.mean(rms_update_batch), pi_l, v_l, ent, kl, cf, ava_red_win_num.item(),\
                                      avg_blue_win_num.item(), ava_draw_num.item(), ava_red_fall_num.item(), avg_blue_fall_num.item(), ava_red_harm_num.item(), avg_blue_harm_num.item(),\
-                                     ava_red_win_rate, ava_blue_win_rate, ava_draw_rate, ava_red_fall_rate, ava_blue_fall_rate, dfops.opponent_list[dfops.opponent_id]['type']])
+                                     ava_red_win_rate, ava_blue_win_rate, ava_draw_rate, ava_red_fall_rate, ava_blue_fall_rate, dfops.opponent_list[dfops.opponent_id]['type'],dfops.opponent_list[dfops.opponent_id]['Pram,net'] ])
             else:
                 with open(file_name, "a", newline = '') as f:
                     writer = csv.writer(f)
                     writer.writerow([epoch, np.mean(epi_turns) if len(epi_turns) > 0 else 0.0,np.mean(rms_update_batch), pi_l, v_l, ent, kl, cf,\
                                      ava_red_win_num.item(), avg_blue_win_num.item(), ava_draw_num.item(), ava_red_fall_num.item(), avg_blue_fall_num.item(),ava_red_harm_num.item(), avg_blue_harm_num.item(),\
-                                     ava_red_win_rate, ava_blue_win_rate, ava_draw_rate, ava_red_fall_rate, ava_blue_fall_rate,dfops.opponent_list[dfops.opponent_id]['type']])
+                                     ava_red_win_rate, ava_blue_win_rate, ava_draw_rate, ava_red_fall_rate, ava_blue_fall_rate,dfops.opponent_list[dfops.opponent_id]['type'], dfops.opponent_list[dfops.opponent_id]['Pram,net']])
 
             print("epoch:", epoch if not args.continue_train else epoch + args.continue_epoch + 1,"step_mean_return:", np.mean(rms_update_batch), "epi_return:", float(epi_mean_turns), "pi_loss:", pi_l,\
                   "v_loss:", v_l, "entropy:", ent, "kl:", kl, "cf:", cf)
@@ -403,7 +403,7 @@ def init_process(rank, size, pargs, fn, backend = 'gloo'):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--seed', type=int, default=528)
+    parser.add_argument('--seed', type=int, default=68)
     parser.add_argument('--model_dir', type=str, default=".\\output")
 
     parser.add_argument('--epoch_train_iters', type=int, default=4)
@@ -449,12 +449,12 @@ if __name__ == '__main__':
     parser.add_argument('--voxel_mlp_ckpt', type=str,
                         default='./output/pretrain_voxel_mlp/voxel_mlp_pretrained_best.pt')
 
-    parser.add_argument('--continue_train', type=bool, default=True)
-    parser.add_argument('--continue_epoch', type=int, default=685)
-    parser.add_argument('--continue_sf', type=bool, default=True)
-    parser.add_argument('--sf_history_index', type=int, default=14) #储存的历史网络策略数量
+    parser.add_argument('--continue_train', type=bool, default=False)
+    parser.add_argument('--continue_epoch', type=int, default=0)
+    parser.add_argument('--continue_sf', type=bool, default=False)
+    parser.add_argument('--sf_history_index', type=int, default=0) #储存的历史网络策略数量
     parser.add_argument('--history_sf_num', type=int, default=0)  #策略池中历史网络策略数量
-    parser.add_argument('--history_start_index', type=int, default=5) #加载的历史网络策略起始编号
+    parser.add_argument('--history_start_index', type=int, default=6) #加载的历史网络策略起始编号
 
 
 

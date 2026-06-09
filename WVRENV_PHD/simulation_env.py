@@ -103,7 +103,7 @@ class CombatEnv(object):
 
         self.world.initialize()
 
-    def update(self,pid, datain):
+    def update(self, pid, datain):
         """
         回合更新函数
         :param datain: 所有飞机的输入控制量

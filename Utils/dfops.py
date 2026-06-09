@@ -64,10 +64,10 @@ class DFOPS(object):
 
         # 对手策略集
         self.opponent_list = [
-            {"type": "warcraft", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 0},
-            {"type": "warcraft-rel", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 1},
-            {"type": "warcraft-abs", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 2},
-            {"type": "warcraft-ao", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 3},
+            {"type": "ppg", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 0},
+            {"type": "ppg-rel", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 1},
+            {"type": "ppg-abs", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 2},
+            {"type": "ppg-ao", "ManeuverLib": True, "Pram,net": self.init_kar, "index": 3},
         ]
         self.self_play_index = 1
 
@@ -161,9 +161,6 @@ class DFOPS(object):
         fighter = env.world.fighters[1]
         target = env.world.fighters[0]
 
-
-
-
         if self.opponent_list[self.opponent_id]["type"] == "warcraft":
             action = self.warcraft_policy(fighter, target,  0)
 
@@ -175,6 +172,18 @@ class DFOPS(object):
 
         elif self.opponent_list[self.opponent_id]["type"] == "warcraft-ao":
             action = self.warcraft_policy(fighter, target, 3)
+
+        elif self.opponent_list[self.opponent_id]["type"] == "ppg":
+            action = self.ppg_policy(fighter, target,self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib, 0)
+
+        elif self.opponent_list[self.opponent_id]["type"] == "ppg-rel":
+            action = self.ppg_policy(fighter, target,self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib, 1)
+
+        elif self.opponent_list[self.opponent_id]["type"] == "ppg-abs":
+            action = self.ppg_policy(fighter, target,self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib, 2)
+
+        elif self.opponent_list[self.opponent_id]["type"] == "ppg-ao":
+            action = self.ppg_policy(fighter, target,self.opponent_list[self.opponent_id]["Pram,net"], maneuver_lib, 3)
 
         elif self.opponent_list[self.opponent_id]["type"] == "net":
             ac_model = self.opponent_list[self.opponent_id]['Pram,net']
@@ -191,33 +200,74 @@ class DFOPS(object):
             dis = 400 + (1 + a[2].item()) * 800
             action = dogf2avoidance(ele_ang, azi_ang, dis, terrain_grid, env, fighter, self.avoidance_pi,
                                     device=self.device)
-
         return action
 
 
     def update_opponent_list(self, epoch, avg_proc_win_rate, avg_proc_op_win, history_index):
-        if (epoch % 5 == 0) and (self.opponent_list[-1]["ManeuverLib"]):
-            if self.opponent_list[-1]['Pram,net'] > 0.1:
-                for op_d in self.opponent_list:
-                    if op_d['ManeuverLib'] == True :
-                        op_d['Pram,net'] *= 0.989
 
-                else:
-                    pass
-        if ((avg_proc_win_rate / (avg_proc_op_win + 0.001)) > 1.05) and (epoch % 50 == 0) and (epoch >= 100):
-            # 随机初始化的网络
-            new_opponent_dict = {"type":"net",
-                                "ManeuverLib": False,
-                                 "Pram,net": Dogfight_ActorCritic(self.obs_self_dim, self.obs_target_dim,self.obs_terrain_dim, self.act_dim, self.mlp_feat_dim ).to(self.device),
-                                 "index": 0}
-
-            if self.opponent_list[-1]['ManeuverLib']:
-                # 判断制导的随机参数是否 < 1
+        if epoch < 350:
+            if (epoch % 5 == 0) and (self.opponent_list[-1]["ManeuverLib"]):
                 if self.opponent_list[-1]['Pram,net'] > 0.1:
-                    new_opponent_dict['ManeuverLib'] = True
-                    new_opponent_dict['Pram,net'] = self.opponent_list[-1]['Pram,net']
-                    new_opponent_dict["index"] = self.opponent_list[-1]['index']
-                    new_opponent_dict["type"] = np.random.choice(["warcraft", "warcraft-rel", "warcraft-abs", "warcraft-ao"])
+                    for op_d in self.opponent_list:
+                        if op_d['ManeuverLib'] == True :
+                            op_d['Pram,net'] *= 0.989
+            if ((avg_proc_win_rate / (avg_proc_op_win + 0.001)) > 1.05) and (epoch % 50 == 0) and (epoch >= 100):
+                if  self.opponent_list[-1]["type"] == "ppg" or self.opponent_list[-1]["type"] == "ppg-rel" or self.opponent_list[-1]["type"] == "ppg-abs" or self.opponent_list[-1]["type"] == "ppg-ao":
+                    if self.opponent_list[-1]['Pram,net'] > 0.15:
+                        new_opponent_dict = {
+                            "type": np.random.choice(["ppg", "ppg-rel", "ppg-abs", "ppg-ao"]),
+                            "ManeuverLib": True,
+                            "Pram,net": self.opponent_list[-1]['Pram,net'],
+                            "index": 0}
+                    else:
+                        new_opponent_dict = {"type": np.random.choice(["warcraft", "warcraft-rel", "warcraft-abs", "warcraft-ao"]),
+                                             "ManeuverLib": True,
+                                             "Pram,net": self.opponent_list[-1]['Pram,net'],
+                                             "index": 0}
+                else:
+                    new_opponent_dict = {
+                        "type": np.random.choice(["warcraft", "warcraft-rel", "warcraft-abs", "warcraft-ao"]),
+                        "ManeuverLib": True,
+                        "Pram,net": 0.08,
+                        "index": 0}
+                self.append_new_opponent(new_opponent_dict, init_score=0.5)
+
+
+        else:
+            if (epoch % 5 == 0) and (self.opponent_list[-1]["ManeuverLib"]):
+                if self.opponent_list[-1]['Pram,net'] > 0.1:
+                    for op_d in self.opponent_list:
+                        if op_d['ManeuverLib'] == True :
+                            op_d['Pram,net'] *= 0.989
+
+                    else:
+                        pass
+            if ((avg_proc_win_rate / (avg_proc_op_win + 0.001)) > 1.05) and (epoch % 50 == 0) and (epoch >= 100):
+                # 随机初始化的网络
+                new_opponent_dict = {"type":"net",
+                                    "ManeuverLib": False,
+                                     "Pram,net": Dogfight_ActorCritic(self.obs_self_dim, self.obs_target_dim,self.obs_terrain_dim, self.act_dim, self.mlp_feat_dim ).to(self.device),
+                                     "index": 0}
+
+                if self.opponent_list[-1]['ManeuverLib']:
+                    # 判断制导的随机参数是否 < 1
+                    if self.opponent_list[-1]['Pram,net'] > 0.1:
+                        new_opponent_dict['ManeuverLib'] = True
+                        new_opponent_dict['Pram,net'] = self.opponent_list[-1]['Pram,net']
+                        new_opponent_dict["index"] = self.opponent_list[-1]['index']
+                        new_opponent_dict["type"] = np.random.choice(["warcraft", "warcraft-rel", "warcraft-abs", "warcraft-ao"])
+
+                    else:
+                        if (history_index > 0) and (self.self_play_index < history_index):
+                            new_opponent_dict['ManeuverLib'] = False
+                            new_opponent_dict['Pram,net'] = torch.load(self.self_play_dir + "history_policy_" + str(self.self_play_index) + ".pt")
+                            new_opponent_dict["index"] = self.self_play_index
+                            self.self_play_index += 1
+
+                        elif history_index > 0:
+                            sfpid = np.random.randint(1, history_index, 1)[0]
+                            new_opponent_dict['ManeuverLib'] = False
+                            new_opponent_dict['Pram,net'] = torch.load(self.self_play_dir + "history_policy_" + str(sfpid) + ".pt")
 
                 else:
                     if (history_index > 0) and (self.self_play_index < history_index):
@@ -225,39 +275,27 @@ class DFOPS(object):
                         new_opponent_dict['Pram,net'] = torch.load(self.self_play_dir + "history_policy_" + str(self.self_play_index) + ".pt")
                         new_opponent_dict["index"] = self.self_play_index
                         self.self_play_index += 1
-
                     elif history_index > 0:
                         sfpid = np.random.randint(1, history_index, 1)[0]
                         new_opponent_dict['ManeuverLib'] = False
                         new_opponent_dict['Pram,net'] = torch.load(self.self_play_dir + "history_policy_" + str(sfpid) + ".pt")
+                        new_opponent_dict["index"] = sfpid
+                self.append_new_opponent(new_opponent_dict, init_score=0.5)
+                if all([op['ManeuverLib'] ==  False for op in self.opponent_list]):
+                    rule_type = np.random.choice(["warcraft", "warcraft-rel", "warcraft-abs", "warcraft-ao"])
 
-            else:
-                if (history_index > 0) and (self.self_play_index < history_index):
-                    new_opponent_dict['ManeuverLib'] = False
-                    new_opponent_dict['Pram,net'] = torch.load(self.self_play_dir + "history_policy_" + str(self.self_play_index) + ".pt")
-                    new_opponent_dict["index"] = self.self_play_index
-                    self.self_play_index += 1
-                elif history_index > 0:
-                    sfpid = np.random.randint(1, history_index, 1)[0]
-                    new_opponent_dict['ManeuverLib'] = False
-                    new_opponent_dict['Pram,net'] = torch.load(self.self_play_dir + "history_policy_" + str(sfpid) + ".pt")
-                    new_opponent_dict["index"] = sfpid
-            self.append_new_opponent(new_opponent_dict, init_score=0.5)
-            if all([op['ManeuverLib'] ==  False for op in self.opponent_list]):
-                rule_type = np.random.choice(["warcraft", "warcraft-rel", "warcraft-abs", "warcraft-ao"])
+                    self.opponent_list[0] = {
+                        "type": rule_type,
+                        "ManeuverLib": True,
+                        "Pram,net": 0.08,
+                        "index": 0,
+                    }
 
-                self.opponent_list[0] = {
-                    "type": rule_type,
-                    "ManeuverLib": True,
-                    "Pram,net": 0.08,
-                    "index": 0,
-                }
-
-                # 新插入的策略重新按 0.5 初始化
-                self.sample_scores[0] = 0.5
-                self.score_red_win[0] = 0
-                self.score_blue_win[0] = 0
-                self.score_draw[0] = 0
+                    # 新插入的策略重新按 0.5 初始化
+                    self.sample_scores[0] = 0.5
+                    self.score_red_win[0] = 0
+                    self.score_blue_win[0] = 0
+                    self.score_draw[0] = 0
 
     def append_new_opponent(self, new_opponent_dict, init_score=0.5):
         """

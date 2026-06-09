@@ -299,7 +299,7 @@ class Terrain_sensor:
                 dir_body = np.array([
                     cos_el * np.cos(az),
                     cos_el * np.sin(az),
-                    sin_el
+                    - sin_el
                 ], dtype=np.float64)
                 self.scan_dirs_body.append(dir_body)
 
@@ -328,7 +328,7 @@ class Terrain_sensor:
         p_ned_all = np.empty((len(s_vals), 3), dtype=np.float64)
         p_ned_all[:, 0] = fighter_ned[0] + s_vals * dir_ned[0]
         p_ned_all[:, 1] = fighter_ned[1] + s_vals * dir_ned[1]
-        p_ned_all[:, 2] = fighter_ned[2] - s_vals * dir_ned[2]
+        p_ned_all[:, 2] = fighter_ned[2] + s_vals * dir_ned[2]
 
         lon_all, lat_all, alt_all = ned_to_wgs84_batch(p_ned_all)
         elev_all = get_elevation_batch(lat_all, lon_all)
@@ -351,7 +351,7 @@ class Terrain_sensor:
             p_ned = np.array([
                 fighter_ned[0] + s * dir_ned[0],
                 fighter_ned[1] + s * dir_ned[1],
-                fighter_ned[2] - s * dir_ned[2]
+                fighter_ned[2] + s * dir_ned[2]
             ], dtype=np.float64)
 
             p_lon, p_lat, p_alt = ned_to_wgs84(p_ned)
@@ -401,88 +401,7 @@ class Terrain_sensor:
 
         return np.asarray(hits, dtype=np.float64)
 
-    def plot_terrain_hits_ned(self, hits, fighter):
-        """
-           hits: [[lon, lat, elev], ...]
-           fighter: 当前飞机对象 env.world.fighters[0]
 
-           飞机和障碍点都画在同一个全局 NED 坐标系下，
-           不把飞机放到原点，也不画连线。
-           """
-
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # 飞机真实 NED 坐标
-        fighter_ned = np.array(fighter.state.ned_Pos, dtype=np.float64)
-        fighter_n = fighter_ned[0]
-        fighter_e = fighter_ned[1]
-        fighter_u = -fighter_ned[2]  # 显示时用 Up 更直观
-
-        # 先画飞机
-        ax.scatter(
-            [fighter_n],
-            [fighter_e],
-            [fighter_u],
-            s=120,
-            marker='^',
-            label='fighter'
-        )
-
-        if hits is not None and len(hits) > 0:
-            hits = np.array(hits, dtype=np.float64)
-
-            # 经纬高 -> NED
-            ned_points = []
-            for lat, lon, alt in hits:
-                north, east, down = wgs84ToNED(lat, lon, alt)
-                ned_points.append([north, east, down])
-
-            ned_points = np.array(ned_points, dtype=np.float64)
-
-            north = ned_points[:, 0]
-            east = ned_points[:, 1]
-            up = -ned_points[:, 2]
-
-            # 只画障碍点
-            ax.scatter(
-                north,
-                east,
-                up,
-                s=12,
-                marker='o',
-                label='terrain hits'
-            )
-
-            # 把飞机和障碍点一起纳入坐标范围
-            all_n = np.append(north, fighter_n)
-            all_e = np.append(east, fighter_e)
-            all_u = np.append(up, fighter_u)
-
-            max_range = np.array([
-                all_n.max() - all_n.min(),
-                all_e.max() - all_e.min(),
-                all_u.max() - all_u.min()
-            ]).max() / 2.0
-
-            if max_range < 1.0:
-                max_range = 1.0
-
-            mid_n = (all_n.max() + all_n.min()) * 0.5
-            mid_e = (all_e.max() + all_e.min()) * 0.5
-            mid_u = (all_u.max() + all_u.min()) * 0.5
-
-            ax.set_xlim(mid_n - max_range, mid_n + max_range)
-            ax.set_ylim(mid_e - max_range, mid_e + max_range)
-            ax.set_zlim(mid_u - max_range, mid_u + max_range)
-
-        ax.set_xlabel("North (m)")
-        ax.set_ylabel("East (m)")
-        ax.set_zlabel("Up (m)")
-        ax.set_title("Discrete Terrain Obstacle Points and Fighter")
-        ax.legend()
-
-        plt.show()
 
 
 
